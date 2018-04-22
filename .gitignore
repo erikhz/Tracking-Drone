@@ -1,0 +1,9 @@
+# Vim
+.*swp
+.*swo
+
+outputs/
+
+# repos 
+dragonfly/
+pennair2/
