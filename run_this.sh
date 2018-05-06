@@ -60,12 +60,14 @@ roslaunch rosbridge_server rosbridge_websocket.launch ssl:=false &> /dev/null &
 python /simulation/inputs/utils/testArmAll.py $num_uavs &> /dev/null &
 
 sleep 3
-rosrun dragonfly main.py &>> /tmp/debug &
+#rosrun dragonfly main.py &>> /tmp/debug &
 #rosrun pennair2 search.py &>> /tmp/debug &
+python /simulation/takeoff.py &>> /tmp/debug &
 
 echo "Measures..."
 python /simulation/inputs/utils/measureInterRobotDistance.py $num_uavs 1 &> /dev/null &
-roslaunch opencv_apps general_contours.launch  image:=/uav_2_camera_front/image_raw debug_view:=false &> /dev/null &
+# roslaunch opencv_apps general_contours.launch  image:=/uav_2_camera_front/image_raw debug_view:=false &> /dev/null &
+roslaunch opencv_apps rgb_color_filter.launch  image:=/uav_2_camera_front/image_raw debug_view:=false &> /dev/null &
 
 for((i=1;i<=$num_uavs;i+=1))
 do
