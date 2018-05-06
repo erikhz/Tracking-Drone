@@ -90,9 +90,9 @@ class colorDetect:
         # print(cx, cy)
 
         # cv2.imshow('frame',frame)
-        cv2.imshow('mask',mask)#SHOW THIS IN GENERAL COUNTOURS IMAGE
+        # cv2.imshow('mask',mask)#SHOW THIS IN GENERAL COUNTOURS IMAGE
         # cv2.imshow('res',res)
-        cv2.waitKey(3)
+        # cv2.waitKey(0)
 
         # cv2.imshow("Image window", cv_image)
         
