@@ -24,12 +24,13 @@ from cv_bridge import CvBridge, CvBridgeError
 class colorDetect:
 
     def __init__(self):
-        self.image_pub = rospy.Publisher("/general_contours/image",Image)
+        self.image_pub = rospy.Publisher('/general_contours/image',Image,queue_size=10)
 
         self.bridge = CvBridge()
-        self.image_sub = rospy.Subscriber("/uav_1_camera_front/image_raw",Image,self.callback)#What is the image topic for uav?
+        self.image_sub = rospy.Subscriber('/uav_1_camera_front/image_raw',Image,self.callback)#What is the image topic for uav?
 
     def callback(self,data):
+
         try:
             cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
 
@@ -69,8 +70,9 @@ class colorDetect:
 
         # mask=blue_mask+green_mask
         mask=green_mask
-        mask = cv2.erode(mask, None, iterations=2)
-        mask = cv2.dilate(mask, None, iterations=2)
+
+        # mask = cv2.erode(mask, None, iterations=2)
+        # mask = cv2.dilate(mask, None, iterations=2)
 
 
         # Bitwise-AND mask and original image to give color as well to mask
@@ -98,14 +100,18 @@ class colorDetect:
         
 
         try:
-            self.image_pub.publish(self.bridge.cv2_to_imgmsg(cv_image, "bgr8"))#convert back to img message
+            self.image_pub.publish(self.bridge.cv2_to_imgmsg(mask, "bgr8"))#convert back to img message
         except CvBridgeError as e:
             print(e)
 
     
 
 if __name__ == "__main__":
-    rospy.init_node("node")
+    # rospy.init_node("node")
+    rospy.init_node('color_detector', anonymous=True)
+    rate = rospy.Rate(10) # 10hz
+    rate.sleep()
+
     mavros = autopilot.Mavros(mavros_prefix="/mavros1")
     quad = core.Multirotor(mavros, frequency=10)
 
@@ -116,7 +122,7 @@ if __name__ == "__main__":
     # analyze
 
     cd= colorDetect()
-    rospy.init_node('color_detector', anonymous=True)
+    
 
     try:
         rospy.spin()
