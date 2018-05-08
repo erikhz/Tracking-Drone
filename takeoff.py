@@ -3,15 +3,12 @@
 import rospy
 from std_msgs.msg import String
 from pennair2 import core, autopilot
-
 import cv2
 import numpy as np
 import roslib
 import sys
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
-
-
 
 
 class colorDetect:
@@ -21,7 +18,7 @@ class colorDetect:
 
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber('/uav_1_camera_down/image_raw',Image,self.callback)#What is the image topic for uav?
-        self.quad=myQuad
+        self.quad=myQuad #passed in the quad 
 
     def callback(self,data):
 
@@ -31,25 +28,22 @@ class colorDetect:
         except CvBridgeError as e:
             print(e)
 
-        #Guassian Blur
+        #Guassian Blur if needed
         #cv_image = cv2.GaussianBlur(cv_image,(3,3),0)
 
         # Convert BGR to HSV
         hsv = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
 
-        #white: (0,255)
-
-        lower_green=np.array([0,0,200])
-        upper_green=np.array([10,50,255])
+        lower_white=np.array([0,0,200])
+        upper_white=np.array([10,150,255])
 
 
-        # Threshold the HSV image to get only green colors
+        # Threshold the HSV image to get only white color
 
-        green_mask = cv2.inRange(hsv, lower_green, upper_green)
+        white_mask = cv2.inRange(hsv, lower_white, upper_white)
 
-        # mask=blue_mask+green_mask
-        mask=green_mask
-        mask = cv2.erode(mask, None, iterations=2)
+        mask=white_mask
+        # mask = cv2.erode(mask, None, iterations=2)
         mask = cv2.dilate(mask, None, iterations=2)
 
 
@@ -57,20 +51,20 @@ class colorDetect:
         res = cv2.bitwise_and(cv_image,cv_image, mask= mask)
         
 
-        try:
+        try: #publishing
             self.image_pub.publish(self.bridge.cv2_to_imgmsg(res, "bgr8"))#convert back to img message
         except CvBridgeError as e:
             print(e)
 
-    
+        
         height, width, channels= cv_image.shape
-        print("height: " + str(height))
-        print("width: " + str(width))
+        # print("height: " + str(height))
+        # print("width: " + str(width))
         # print("channels: " +channels)
         # cv2.imshow("Image window", cv_image)
 
-        #find centroid of "blobs"?
-        
+
+        #find centroids of "blobs"
         m=cv2.moments(mask)
         try: 
             cx= int(m['m10']/m['m00'])
@@ -86,10 +80,10 @@ class colorDetect:
         vel_msg = quad.get_velocity()
 
         #Enter zeroing in mode once color is found
-
-        while cx<280 or cx>360:
-            if quad.get_position().position.z >=20:
-                vel_msg.twist.linear.z =-1  
+        while cx<280 or cx>360 or cy>240:
+            # if quad.get_position().position.z >=20:
+            #     vel_msg.twist.linear.z =-1 
+            #WANT TO MAINTAIN CERTAIN HEIGHT 
             
             if cx<280:
                 vel_msg.twist.angular.z=0.3
@@ -97,16 +91,11 @@ class colorDetect:
             else:
                 vel_msg.twist.angular.z=-0.3
                 
-            quad.set_velocity(vel_msg)
+            quad.set_velocity(vel_msg) #swivel until target is in front
 
-        print("hello")
-
-        vel_msg.twist.linear.x=10
-        
-
-        # print(cx, cy)
+        # vel_msg.twist.linear.x=10
             
-        # quad.set_position([2, 2, 5], blocking=True)
+        quad.set_position([2, 2, 5], blocking=True)
 
 
 if __name__ == "__main__":
@@ -137,7 +126,7 @@ if __name__ == "__main__":
     quad.takeoff()
     cd= colorDetect(quad)
 
-    quad.set_position([0, 0, 10], blocking=True)
+    quad.set_position([0, 0, 25], blocking=True)
     rospy.sleep(3)
     
 
