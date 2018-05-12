@@ -9,6 +9,11 @@ import roslib
 import sys
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
+# from pennair2.localization import NavstatTransformNode, LocalizationNode
+# from pennair2.launch import launch, LaunchFile
+from gazebo_msgs.srv import SpawnModel, SpawnModelRequest, SpawnModelResponse
+from geometry_msgs.msg import Quaternion
+import rospkg
 
 
 class colorDetect:
@@ -19,6 +24,8 @@ class colorDetect:
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber('/uav_1_camera_down/image_raw',Image,self.callback)#What is the image topic for uav?
         self.quad=myQuad #passed in the quad 
+
+
 
     def callback(self,data):
 
@@ -34,15 +41,16 @@ class colorDetect:
         # Convert BGR to HSV
         hsv = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
 
-        lower_white=np.array([0,0,200])
-        upper_white=np.array([10,150,255])
+        lower_mag=np.array([130,150,170])#CHANGE TO MAGENTA
+        upper_mag=np.array([170,200,200])
+        # [[[150 174 183]]]
 
 
         # Threshold the HSV image to get only white color
 
-        white_mask = cv2.inRange(hsv, lower_white, upper_white)
+        mag_mask = cv2.inRange(hsv, lower_mag, upper_mag)
 
-        mask=white_mask
+        mask=mag_mask
         # mask = cv2.erode(mask, None, iterations=2)
         mask = cv2.dilate(mask, None, iterations=2)
 
@@ -77,29 +85,51 @@ class colorDetect:
 
         print(cx,cy)
 
-        vel_msg = quad.get_velocity()
+
+        # vel_msg = quad.get_velocity()
 
         #Enter zeroing in mode once color is found
-        while cx<(width/2)-30 or cx>(width/2)+30 or cy>(height/2)-10: #while out of bounds
-            # if quad.get_position().position.z >=20:
-            #     vel_msg.twist.linear.z =-1 
-            #WANT TO MAINTAIN CERTAIN HEIGHT 
+        # while cx<(width/2)-30 or cx>(width/2)+30 or cy>(height/2)-10: #while out of bounds
+        #     # if quad.get_position().position.z >=20:
+        #     #     vel_msg.twist.linear.z =-1 
+        #     #WANT TO MAINTAIN CERTAIN HEIGHT 
             
-            if cx<280:
-                vel_msg.twist.angular.z=0.3
+        #     if cx<280:
+        #         vel_msg.twist.angular.z=0.3
                 
-            else:
-                vel_msg.twist.angular.z=-0.3
+        #     else:
+        #         vel_msg.twist.angular.z=-0.3
                 
-            quad.set_velocity(vel_msg) #swivel until target is in front
+        #     quad.set_velocity(vel_msg) #swivel until target is in front
 
         #move toward target
 
 
         # vel_msg.twist.linear.x=10
             
-        quad.set_position([2, 2, 5], blocking=True)
+        # quad.set_position([2, 2, 5], blocking=True)
 
+
+def spawn_square(x, y, z):
+        
+        request = SpawnModelRequest()
+        request.initial_pose.position.x = x
+        request.initial_pose.position.y = y
+        request.initial_pose.position.z = z
+        request.model_name = "square"
+
+        with open(rospkg.RosPack().get_path("dragonfly") + "/models/square/model.sdf", 'r') as f:
+            model_xml = f.read()
+        request.model_xml = model_xml
+
+        # print(model_xml)
+
+        rospy.wait_for_service("/gazebo/spawn_sdf_model")
+        service_proxy = rospy.ServiceProxy("/gazebo/spawn_sdf_model", SpawnModel)
+        try:
+            response = service_proxy(request)  # type: SpawnModelResponse
+        except rospy.ServiceException, e:
+            print("Service call failed: %s" % e)
 
 if __name__ == "__main__":
     
@@ -120,6 +150,11 @@ if __name__ == "__main__":
     #     print("Shutting down")
         
     # quadnew.land()
+    spawn_square(0,0,5)
+
+    # magenta = np.uint8([[[183,58,181 ]]]) 
+    # magHSV = cv2.cvtColor(magenta, cv2.COLOR_BGR2HSV)
+    # print(magHSV)
 
 
     #Actual drone
@@ -129,7 +164,7 @@ if __name__ == "__main__":
     quad.takeoff()
     cd= colorDetect(quad)
 
-    quad.set_position([0, 0, 25], blocking=True)
+    quad.set_position([0, 0, 15], blocking=True)
     rospy.sleep(3)
     
 

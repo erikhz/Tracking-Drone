@@ -34,6 +34,13 @@ cp /simulation/dragonfly . -r
 cd ~/catkin_ws
 catkin build pennair2 dragonfly
 source ~/catkin_ws/devel/setup.bash
+
++apt update
++rosdep update
++rosdep install pennair2
++rosdep install dragonfly
+
+
 cd "$P"
 echo "END PAR LIBRARY" >> /tmp/debug
 # END PAR LIBRARY
