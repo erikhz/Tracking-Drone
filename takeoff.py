@@ -35,14 +35,13 @@ class colorDetect:
         except CvBridgeError as e:
             print(e)
 
-        #Guassian Blur if needed
-        #cv_image = cv2.GaussianBlur(cv_image,(3,3),0)
+        
 
         # Convert BGR to HSV
         hsv = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
 
-        lower_mag=np.array([130,150,170])#CHANGE TO MAGENTA
-        upper_mag=np.array([170,200,200])
+        lower_mag=np.array([140,150,170])#CHANGE TO MAGENTA
+        upper_mag=np.array([160,255,255])
         # [[[150 174 183]]]
 
 
@@ -58,21 +57,21 @@ class colorDetect:
         # Bitwise-AND mask and original image to give color as well to mask
         res = cv2.bitwise_and(cv_image,cv_image, mask= mask)
         
+        quad.set_position([2, 2, 7], blocking=True)
 
-        try: #publishing
-            self.image_pub.publish(self.bridge.cv2_to_imgmsg(res, "bgr8"))#convert back to img message
-        except CvBridgeError as e:
-            print(e)
-
+       
         
         height, width, channels= cv_image.shape
         # print("height: " + str(height))
         # print("width: " + str(width))
         # print("channels: " +channels)
-        # cv2.imshow("Image window", cv_image)
 
 
-        #find centroids of "blobs"
+        #Guassian Blur if needed
+        cv_image = cv2.GaussianBlur(cv_image,(3,3),0)
+
+
+        # find centroids of "blobs"
         m=cv2.moments(mask)
         try: 
             cx= int(m['m10']/m['m00'])
@@ -85,6 +84,38 @@ class colorDetect:
 
         print(cx,cy)
 
+        #approach centroid and center right above it-Dhruv
+
+        # find contours
+        try:
+            _, cnts, _ = cv2.findContours(mask, cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
+            # cnts = cnts[0]
+            # c=cnts[0]
+            # print len(cnts)
+
+            
+            for c in cnts:
+                
+                approx = cv2.approxPolyDP(c, 0.04*cv2.arcLength(c, True), True)
+                # print approx
+                cv2.drawContours(cv_image, [approx], -1, (0,255,0), 4)
+
+                if len(approx)==4:
+                    print "rectangle"
+
+                else:
+                    print "not"
+
+        except:
+            print("end")
+
+
+
+        try: #publishing
+            self.image_pub.publish(self.bridge.cv2_to_imgmsg(cv_image, "bgr8"))#convert back to img message
+        except CvBridgeError as e:
+            print(e)
+        
 
         # vel_msg = quad.get_velocity()
 
@@ -150,21 +181,24 @@ if __name__ == "__main__":
     #     print("Shutting down")
         
     # quadnew.land()
-    spawn_square(0,0,5)
 
-    # magenta = np.uint8([[[183,58,181 ]]]) 
+    spawn_square(2,2,3)
+
+    # magenta = np.uint8([[[180,3,175 ]]]) 
     # magHSV = cv2.cvtColor(magenta, cv2.COLOR_BGR2HSV)
-    # print(magHSV)
-
+    # print magHSV
+    
 
     #Actual drone
     mavros = autopilot.Mavros(mavros_prefix="/mavros1")
     quad = core.Multirotor(mavros, frequency=10)
 
     quad.takeoff()
+    
+
+    # quad.set_position([2, 2, 10], blocking=True)
     cd= colorDetect(quad)
 
-    quad.set_position([0, 0, 15], blocking=True)
     rospy.sleep(3)
     
 
